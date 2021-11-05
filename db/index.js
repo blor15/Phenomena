@@ -1,10 +1,10 @@
 // Require the Client constructor from the pg package
-
+const { Client } = require('pg');
 // Create a constant, CONNECTION_STRING, from either process.env.DATABASE_URL or postgres://localhost:5432/phenomena-dev
-
+const CONNECTION_STRING = process.env.DATABASE_URL || 'postgres:localhost:5432/phenomena-dev';
 // Create the client using new Client(CONNECTION_STRING)
 // Do not connect to the client in this file!
-
+const client = new Client(CONNECTION_STRING);
 /**
  * Report Related Methods
  */
@@ -20,7 +20,14 @@
 async function getOpenReports() {
   try {
     // first load all of the reports which are open
-    
+    if (isOpen === true) {
+      await client.query(`
+        SELECT *
+        UPDATE reports
+        RETURNING *;
+      `)
+            
+    }
 
     // then load the comments only for those reports, using a
     // WHERE "reportId" IN () clause
@@ -55,19 +62,19 @@ async function getOpenReports() {
  */
 async function createReport(reportFields) {
   // Get all of the fields from the passed in object
-
-
+const { title, location, description, password } = reportFields;
   try {
     // insert the correct fields into the reports table
     // remember to return the new row from the query
-    
-
+    const { rows: [report] } = await client.query(`
+     INSERT INTO reports(title, location, description, password)
+     VALUES ($1, $2, $3, $4)
+     RETURNING *;
+    `,[title, location, description, password]);
     // remove the password from the returned row
-    
-
+    delete report.password;
     // return the new report
-    
-
+    return report;
   } catch (error) {
     throw error;
   }
@@ -148,7 +155,6 @@ async function closeReport(reportId, password) {
 async function createReportComment(reportId, commentFields) {
   // read off the content from the commentFields
 
-
   try {
     // grab the report we are going to be commenting on
 
@@ -178,3 +184,7 @@ async function createReportComment(reportId, commentFields) {
 }
 
 // export the client and all database functions below
+module.exports = {
+  client,
+  createReport,
+}
